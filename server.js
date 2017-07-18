@@ -1,7 +1,6 @@
 // server.js
 // SERVER-SIDE JAVASCRIPT
 
-
 /////////////////////////////
 //  SETUP and CONFIGURATION
 /////////////////////////////
@@ -21,7 +20,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 //import models module
 var db = require('./models')
-
 
 
 ////////////////////
@@ -53,14 +51,6 @@ var db = require('./models')
 // ];
 
 
-// var newBookUUID = 18;
-
-
-
-
-
-
-
 ////////////////////
 //  ROUTES
 ///////////////////
@@ -73,17 +63,19 @@ app.get('/', function (req, res) {
   res.sendFile('views/index.html' , { root : __dirname});
 });
 
-// get all books
+//get all books
 app.get('/api/books', function (req, res) {
   // send all books as JSON response
-  db.Book.find(function(err, books){
-    if (err) {
-      console.log("index error: " + err);
-      res.sendStatus(500);
-    }
-    res.json(books);
-  });
+  db.Book.find()
+  //populate fills in the author id with all the author data
+    .populate('author')
+    .exec(function(err, books){
+      if (err) {return console.log("index error: " + err);}
+      res.json(books);
+    });
 });
+
+
 
 // get one book
 // app.get('/api/books/:id', function (req, res) {
@@ -104,13 +96,32 @@ app.get('/api/books/:id', function (req, res){
 })
 
 // create new book
-app.post('/api/books', function (req, res) {
-  // create new book with form data (`req.body`)
-  console.log('books create', req.body);
-  var newBook =  new db.Book (req.body);
-  newBook.save(function (err, savedBook){
-    res.json(savedBook);
-  })
+app.post('/api/books', function (req, res){
+  //create new book with form data (`req.body`)
+  // .populate('author')
+  var newBook = new db.Book({
+    title: req.body.title,
+    image: req.body.image,
+    releaseDate: req.body.releaseDate,
+  });
+
+  // newBook.save(function(err, savedBook){
+  //   console.log("LINE 108", savedBook);
+  //   res.json(savedBook);
+  // })
+
+  //this will add another book to author if author already exists
+  db.Author.findOne({name: req.body.author}, function(err, author){
+    newBook.author = author;
+    //add newBook to database
+    newBook.save(function(err, book){
+      if (err){
+        return console.log("create error: " + err);
+      }
+      console.log("created thissssss", book.title);
+      res.json(book);
+    });
+  });
 });
 
 // update book
@@ -122,16 +133,13 @@ app.put('/api/books/:id', function(req,res){
   var updateBookIndex = books.findIndex(function(element, index) {
     return (element._id === parseInt(req.params.id)); //params are strings
   });
+
   console.log('updating book with index', deleteBookIndex);
+
   var bookToUpdate = books[deleteBookIndex];
   books.splice(updateBookIndex, 1, req.params);
   res.json(req.params);
 });
-
-//.find()
-// app.get('/api/books', function(req, res){
-//   db.
-// })
 
 // delete book
 app.delete('/api/books/:id', function (req, res) {
